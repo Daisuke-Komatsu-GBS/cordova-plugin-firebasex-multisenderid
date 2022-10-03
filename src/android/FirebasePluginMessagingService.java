@@ -56,9 +56,29 @@ public class FirebasePluginMessagingService extends FirebaseMessagingService {
     @Override
     public void onNewToken(String refreshedToken) {
         try{
-            super.onNewToken(refreshedToken);
-            Log.d(TAG, "Refreshed token: " + refreshedToken);
-            FirebasePlugin.sendToken(refreshedToken);
+            FirebaseApp secondFirebaseApp = FirebaseApp.getInstance(FirebasePlugin.SECOND_FIREBASE_APP);
+            FirebaseMessaging fbm = (FirebaseMessaging)secondFirebaseApp.get(FirebaseMessaging.class);
+            fbm.token.addOnCompleteListener(new OnCompleteListener<String>() {
+                @Override
+                public void onComplete(@NonNull Task<String> task) {
+                    try {
+                        if (task.isSuccessful() || task.getException() == null) {
+                            String currentToken = task.getResult();
+                            if (currentToken != null) {
+                                super.onNewToken(currentToken);
+                                Log.d(TAG, "Refreshed token: " + currentToken);
+                                FirebasePlugin.sendToken(currentToken);
+                            }
+                        }else if(task.getException() != null){
+                            callbackContext.error(task.getException().getMessage());
+                        }else{
+                            callbackContext.error("Task failed for unknown reason");
+                        }
+                    } catch (Exception e) {
+                        handleExceptionWithContext(e, callbackContext);
+                    }
+                };
+            });
         }catch (Exception e){
             FirebasePlugin.handleExceptionWithoutContext(e);
         }

@@ -154,6 +154,9 @@ public class FirebasePlugin extends CordovaPlugin {
 
     private Map<String, ListenerRegistration> firestoreListeners = new HashMap<String, ListenerRegistration>();
 
+    private FirebaseApp secondFirebaseApp;
+    public static final String SECOND_FIREBASE_APP_KEY = "secondFirebaseApp";
+
     @Override
     protected void pluginInitialize() {
         instance = this;
@@ -197,6 +200,30 @@ public class FirebasePlugin extends CordovaPlugin {
                         }
                     })
                     .create();
+
+                    String firstId = FirebaseInstanceId.getInstance().getId();
+                    Log.d(TAG, "pluginInitialize firstId:["+firstId+"]");
+                    String firstToken = FirebaseInstanceId.getInstance().getToken();
+                    Log.d(TAG, "pluginInitialize firstToken:["+firstToken+"]");
+
+                    // 二つ目のfirebase projectを初期化
+                    // ファイルリーダで読み込む
+                    FileReader fileReader = new FileReader("/google-services_2nd.json");
+                    // GSONを使用
+                    Gson gson_2nd = new Gson();
+                    // Jsonを読み込んで、modelクラスに格納する
+                    Firebase2ndProjectOptions f2po = gson_2nd.fromJson(fileReader, Firebase2ndProjectOptions.class);
+
+                    FirebaseOptions secondOptions = new FirebaseOptions.Builder()
+                        .setProjectId(f2po.getProjectId())
+                        .setApplicationId(f2po.getApplicationId())
+                        .setApiKey(f2po.getApiKey())
+                        .setGcmSenderId(f2po.getGcmSenderId())
+                        .build();
+                    FirebaseApp.initializeApp(applicationContext, secondOptions, SECOND_FIREBASE_APP_KEY);
+                    secondFirebaseApp = FirebaseApp.getInstance(SECOND_FIREBASE_APP_KEY);
+                    // デフォルトを消す。
+                    FirebaseInstanceId.getInstance().deleteInstanceId();
 
                     if (extras != null && extras.size() > 1) {
                         if (FirebasePlugin.notificationStack == null) {
@@ -502,7 +529,10 @@ public class FirebasePlugin extends CordovaPlugin {
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
                 try {
-                    FirebaseMessaging.getInstance().getToken().addOnCompleteListener(new OnCompleteListener<String>() {
+                    secondFirebaseApp = FirebaseApp.getInstance(SECOND_FIREBASE_APP_KEY);
+                    FirebaseMessaging fbm = (FirebaseMessaging)secondFirebaseApp.get(FirebaseMessaging.class);
+                    //FirebaseMessaging.getInstance().getToken().addOnCompleteListener(new OnCompleteListener<String>() {
+                    fbm.token.addOnCompleteListener(new OnCompleteListener<String>() {
                         @Override
                         public void onComplete(@NonNull Task<String> task) {
                             try {
@@ -601,7 +631,10 @@ public class FirebasePlugin extends CordovaPlugin {
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
                 try {
-                    FirebaseMessaging.getInstance().getToken().addOnCompleteListener(new OnCompleteListener<String>() {
+                    secondFirebaseApp = FirebaseApp.getInstance(SECOND_FIREBASE_APP_KEY);
+                    FirebaseMessaging fbm = (FirebaseMessaging)secondFirebaseApp.get(FirebaseMessaging.class);
+                    //FirebaseMessaging.getInstance().getToken().addOnCompleteListener(new OnCompleteListener<String>() {
+                    fbm.token.addOnCompleteListener(new OnCompleteListener<String>() {
                         @Override
                         public void onComplete(@NonNull Task<String> task) {
                             try {
@@ -645,7 +678,9 @@ public class FirebasePlugin extends CordovaPlugin {
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
                 try {
-                    handleTaskOutcome(FirebaseMessaging.getInstance().subscribeToTopic(topic), callbackContext);
+                    secondFirebaseApp = FirebaseApp.getInstance(SECOND_FIREBASE_APP_KEY);
+                    FirebaseMessaging fbm = (FirebaseMessaging)secondFirebaseApp.get(FirebaseMessaging.class);
+                    handleTaskOutcome(fbm.subscribeToTopic(topic), callbackContext);
                 } catch (Exception e) {
                     handleExceptionWithContext(e, callbackContext);
                 }
@@ -657,7 +692,9 @@ public class FirebasePlugin extends CordovaPlugin {
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
                 try {
-                    handleTaskOutcome(FirebaseMessaging.getInstance().unsubscribeFromTopic(topic), callbackContext);
+                    secondFirebaseApp = FirebaseApp.getInstance(SECOND_FIREBASE_APP_KEY);
+                    FirebaseMessaging fbm = (FirebaseMessaging)secondFirebaseApp.get(FirebaseMessaging.class);
+                    handleTaskOutcome(fbm.unsubscribeFromTopic(topic), callbackContext);
                 } catch (Exception e) {
                     handleExceptionWithContext(e, callbackContext);
                 }
@@ -669,7 +706,9 @@ public class FirebasePlugin extends CordovaPlugin {
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
                 try {
-                    handleTaskOutcome(FirebaseMessaging.getInstance().deleteToken(), callbackContext);
+                    secondFirebaseApp = FirebaseApp.getInstance(SECOND_FIREBASE_APP_KEY);
+                    FirebaseMessaging fbm = (FirebaseMessaging)secondFirebaseApp.get(FirebaseMessaging.class);
+                    handleTaskOutcome(fbm.deleteToken(), callbackContext);
                 } catch (Exception e) {
                     handleExceptionWithContext(e, callbackContext);
                 }
@@ -681,7 +720,9 @@ public class FirebasePlugin extends CordovaPlugin {
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
                 try {
-                    boolean isEnabled = FirebaseMessaging.getInstance().isAutoInitEnabled();
+                    secondFirebaseApp = FirebaseApp.getInstance(SECOND_FIREBASE_APP_KEY);
+                    FirebaseMessaging fbm = (FirebaseMessaging)secondFirebaseApp.get(FirebaseMessaging.class);
+                    boolean isEnabled = fbm.isAutoInitEnabled();
                     callbackContext.success(conformBooleanForPluginResult(isEnabled));
                 } catch (Exception e) {
                     logExceptionToCrashlytics(e);
@@ -696,7 +737,9 @@ public class FirebasePlugin extends CordovaPlugin {
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
                 try {
-                    FirebaseMessaging.getInstance().setAutoInitEnabled(enabled);
+                    secondFirebaseApp = FirebaseApp.getInstance(SECOND_FIREBASE_APP_KEY);
+                    FirebaseMessaging fbm = (FirebaseMessaging)secondFirebaseApp.get(FirebaseMessaging.class);
+                    fbm.setAutoInitEnabled(enabled);
                     callbackContext.success();
                 } catch (Exception e) {
                     logExceptionToCrashlytics(e);
